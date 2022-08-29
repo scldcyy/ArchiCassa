@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--光栅模板-->
-<scene name='raster-template' light='left'>
+<scene name='raster-template'>
 <!--svg视窗大小-->
 <!--视窗的长宽记为W、H-->
 <scale>
@@ -32,7 +32,7 @@
      <archi id ='3' url=''/>
 </archis-url>
 <!--模板布局-->
-<layout archi-interval='0.05w'>
+<layout archi-interval='0.05w' light='True'>
      <!--光栅条纹参数-->
      <raster layer='1' num='7'>
      </raster>
@@ -43,7 +43,7 @@
      <prospect-shot layer='3' up='0.6' down='0' width-bound='0.3w' height-bound='0.6h' fill='white' stroke='white'>
      </prospect-shot>
      <!--云层参数-->   
-     <cloud num='9' url='archis/cloud/' layer='4' up='1' down='0.6' width-bound='0.3w' height-bound='0.6h' fill-opacity='0.3'>
+     <cloud num='4' url='archis/cloud/' layer='4' up='1' down='0.8' width-bound='0.3w' height-bound='0.6h' fill-opacity='0.3'>
      </cloud>
 </layout>
 <!--模板评价方式-->

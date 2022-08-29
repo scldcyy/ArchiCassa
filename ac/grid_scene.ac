@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--光栅模板-->
-<scene name='raster-template' light='left'>
+<!--网格模板-->
+<scene name='grid-template'>
 <!--svg视窗大小-->
 <!--视窗的长宽记为W、H-->
 <scale>
@@ -32,7 +32,7 @@
      <archi id ='3' url=''/>
 </archis-url>
 <!--模板布局-->
-<layout archi-interval='0.005w'>
+<layout archi-interval='0.005w' light='True'>
      <!--网格基本单元参数-->
      <grid layer='1' grid-x='4' grid-y='5'>
      </grid>

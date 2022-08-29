@@ -74,13 +74,14 @@ def loadArchi(svgFile):
     return archi
 
 
-def drawGrid(savePath, temp, archiNum=None):
+def drawGrid(savePath, temp):
     """
     网格布局
     :param savePath:
     :param temp:
     :return:
     """
+    # 读取archi
     ac = temp.getTree()
     colorTemplate = ac.find('colors')[0].get('colors').split(' ')
     colorTemplate = [[colorTemplate[3 * i], colorTemplate[3 * i + 1], colorTemplate[3 * i + 2]] for i in
@@ -94,93 +95,129 @@ def drawGrid(savePath, temp, archiNum=None):
         if archi:
             archi.args['id'] = archi.file[:-4]
             archis.append(archi)
-    if not archiNum or archiNum > len(archis):
-        archiNum = len(archis)
-    archis = random.sample(archis, archiNum)
-    random.shuffle(archis)
+    # 确定网格位置、大小
     w = temp.width
     h = temp.height
     grid_x = eval(layout[0].get('grid-x'))
     grid_y = eval(layout[0].get('grid-y'))
     sep_x = w / grid_x
     sep_y = h / grid_y
-    short_x = sep_x / 2 - diff
-    long_x = sep_x - diff
-    short_y = sep_y / 2 - diff
-    long_y = sep_y - diff
-    grid = np.ones((grid_x, grid_y))
-    for i in range(grid_x):
-        for j in range(grid_y):
-            if i < grid_x - 1:
-                if random.random() < .3 and grid[i, j] == 1:
-                    grid[i, j] = 2
-                    grid[i + 1, j] = 0
-            if j < grid_y - 1:
-                if random.random() < .3 and grid[i, j] == 1 and grid[i, j + 1] != 0:
-                    grid[i, j] = 3
-                    grid[i, j + 1] = 0
-            if i < grid_x - 1 and j < grid_y - 1:
-                if random.random() < .6 and grid[i, j] == 1 and grid[i, j + 1] == 1 and grid[i + 1, j] == 1 and grid[i + 1, j + 1] == 1:
-                    grid[i, j] = 4
-                    grid[i + 1, j] = 0
-                    grid[i, j + 1] = 0
-                    grid[i + 1, j + 1] = 0
+    reverse = True if grid_x > grid_y else False
+    if reverse:
+        r_x, r_y = grid_y, grid_x
+    else:
+        r_x, r_y = grid_x, grid_y
+    grid = np.ones((r_x, r_y))
+    largest = int(r_x / 2)
+    mat = np.zeros((largest, largest))
+    mat[0, 0] = largest * largest
+    # 选择左右
+    chs = random.randint(0, 1)
+    offset = random.randint(0, r_y - largest * 2)
+    if chs == 0:
+        grid[:largest, :largest] = grid[:largest, -largest:] = grid[-largest:, int(
+            (r_y - largest) / 2) + offset:int((r_y + largest) / 2) + offset] = mat
+    else:
+        grid[-largest:, :largest] = grid[-largest:, -largest:] = grid[:largest, int(
+            (r_y - largest) / 2) + offset:int((r_y + largest) / 2) + offset] = mat
+    tmp = list(range(1, largest))
+    rev = list(reversed(tmp))
+    for i in range(r_x):
+        for j in range(r_y):
+            if grid[i, j] != 1:
+                continue
+            chs = random.choices(tmp, rev, k=1)[0]
+            if i + chs < r_x and j + chs < r_y and (grid[i:i + chs, j:j + chs] == 1).all():
+                mat = np.zeros((chs, chs))
+                mat[0, 0] = chs * chs
+                grid[i:i + chs, j:j + chs] = mat
+
+    if reverse:
+        grid = grid.T
+    archiNum = np.count_nonzero(grid)
+    # 绘制网格
+    archis = random.sample(archis, archiNum)
+    h_divide_w = np.array([archi.out_rect[1] / archi.out_rect[0] for archi in archis])
+    colors = random.choices(colorTemplate, k=len(archis))
     current_x = sep_x / 2
     current_y = sep_y / 2
-    rect_ls = []
+    count = 0
+    wait = np.argsort(-h_divide_w)
+    tmp = np.cumsum([np.count_nonzero(i) for i in grid])
+    sameRow = np.zeros_like(tmp)
+    sameRow[1:] = tmp[:-1]
+    for i in range(len(wait)):
+        if wait[i] in sameRow:
+            np.delete(wait, i)
+    chs = wait[0]
+    # chs = sat
+    # chs = np.random.choice(np.setdiff1d(wait, sameRow), 1)[0]
+    base_ls = []
+    c1, c2 = colors[0][1], colors[0][1]
     for i in range(grid_x):
         for j in range(grid_y):
             cell = grid[i, j]
-            if cell == 1:
-                rect_ls.append([current_x, current_y, short_x, short_y])
-                # draw_rect(current_x, current_y, short_x, short_y, temp, f)
-            if cell == 2:
-                rect_ls.append([current_x + sep_x / 2, current_y, long_x, short_y])
-            if cell == 3:
-                rect_ls.append([current_x, current_y + sep_y / 2, short_x, long_y])
-            if cell == 4:
-                rect_ls.append([current_x + sep_x / 2, current_y + sep_y / 2, long_x, long_y])
+            if cell != 0:
+                archi = archis[count]
+                step = cell ** 0.5
+                grid_w = sep_x * step / 2 - diff
+                grid_h = sep_y * step / 2 - diff
+                cx = current_x + sep_x / 2 * (step - 1)
+                cy = current_y + sep_y / 2 * (step - 1)
+                archi_h_div_w = h_divide_w[count]
+                step = grid_w
+                rect = BasicElement(TAG_NAME='rect', id=f'rect{count}', x=cx - grid_w,
+                                    y=cy - grid_h,
+                                    width=2 * grid_w, height=2 * grid_h,
+                                    fill=colors[count][0])
+                clip = drawSvg.ClipPath(id=f'clip{count}')
+                clip.append(rect)
+                if archi_h_div_w > grid_h / grid_w:
+                    step = grid_h / archi_h_div_w
+
+                if count == chs - 1:
+                    archi = Archi()
+                    c1, c2 = colors[count][1], colors[count][2]
+                elif count == chs:
+                    ratio = min((sep_y - diff) / archi.out_rect[1] * 3, (sep_x - diff) / archi.out_rect[0] * 0.8)
+                    update_dict = {'x': str(current_x - archi.out_rect[0] * ratio / 2),
+                                   'y': str(current_y + grid_h - archi.out_rect[1] * ratio),
+                                   'width': str(archi.out_rect[0]),
+                                   'height': str(archi.out_rect[1]),
+                                   'viewBox': f'0 0 {archi.out_rect[0] / ratio} {archi.out_rect[1] / ratio}',
+                                   'fill': colors[count][1],
+                                   'stroke': colors[count][1]}
+                    archi.args.update(update_dict)
+                    for elem in archi.iter():
+                        if 'light' in elem.args:
+                            elem.args['fill'] = c2
+                    base_ls[count - 1].children[1] = copy.deepcopy(archi)
+                    base_ls[count - 1].children[1].args['fill'] = c1
+                    base_ls[count - 1].children[1].args['stroke'] = c1
+                else:
+                    ratio = step / archi.out_rect[0] * 1.6
+                    update_dict = {'x': str(cx - archi.out_rect[0] * ratio / 2),
+                                   'y': str(cy + grid_h - archi.out_rect[1] * ratio),
+                                   'width': str(archi.out_rect[0]),
+                                   'height': str(archi.out_rect[1]),
+                                   'viewBox': f'0 0 {archi.out_rect[0] / ratio} {archi.out_rect[1] / ratio}',
+                                   'fill': colors[count][1],
+                                   'stroke': colors[count][1]}
+                    archi.args.update(update_dict)
+                    for elem in archi.iter():
+                        if 'light' in elem.args:
+                            elem.args['fill'] = colors[count][2]
+                base = Archi()
+                base.append(rect)
+                base.append(archi)
+                base.args['clip-path'] = clip
+                base_ls.append(base)
+                # gridLoc.append([i, j])
+                count += 1
             current_y += sep_y
         current_y = sep_y / 2
         current_x += sep_x
-    use_ls = [drawSvg.Use(archi, 0, 0) for archi in archis]
-    if len(archis) < len(rect_ls):
-        tmp = random.sample(archis, len(rect_ls) - len(archis))
-        for archi in tmp:
-            use_ls.append(drawSvg.Use(archi, 0, 0))
-    else:
-        use_ls = use_ls[:len(rect_ls)]
-    h_divide_w = np.array([use.getSvgDefs()[0].out_rect[1] / use.getSvgDefs()[0].out_rect[0] for use in use_ls])
-    colors = random.choices(colorTemplate, k=len(use_ls))
-    for i, use in enumerate(use_ls):
-        archi_h_div_w = h_divide_w[i]
-        const_w, const_h = rect_ls[i][2], rect_ls[i][3]
-        step = const_w
-        if archi_h_div_w > const_h / const_w:
-            step = const_h / archi_h_div_w
-        ratio = step / use.getSvgDefs()[0].out_rect[0] * 1.6
-        c = colors[i][1]
-        update_dict = {'width': str(use.getSvgDefs()[0].out_rect[0]),
-                       'height': str(use.getSvgDefs()[0].out_rect[1]),
-                       'viewBox': f'0 0 {use.getSvgDefs()[0].out_rect[0] / ratio} {use.getSvgDefs()[0].out_rect[1] / ratio}'}
-        popArg(use.getSvgDefs()[0].args, 'fill')
-        popArg(use.getSvgDefs()[0].args, 'stroke')
-        use.getSvgDefs()[0].args.update(update_dict)
-        update_dict = {
-            'x': str(rect_ls[i][0] - use.getSvgDefs()[0].out_rect[0] * ratio / 2),
-            'y': str(rect_ls[i][1] - use.getSvgDefs()[0].out_rect[1] * ratio / 2),
-            'fill': c,
-            'stroke': c}
-        use.args.update(update_dict)
-        temp.append(use)
-    grid = Archi()
-    for i in range(len(use_ls)):
-        rect = BasicElement(TAG_NAME='rect', id=f'rect{i}', x=rect_ls[i][0] - rect_ls[i][2],
-                            y=rect_ls[i][1] - rect_ls[i][3],
-                            width=2 * rect_ls[i][2], height=2 * rect_ls[i][3],
-                            fill=colors[i][0])
-        grid.append(rect)
-    temp.elements = [drawSvg.Use(grid, 0, 0)] + temp.elements
+    temp.elements = base_ls
     temp.saveSvg(savePath)
 
 
@@ -195,6 +232,7 @@ def drawRaster(savePath, temp, archiNum=None):
     colorTemplate = ac.find('colors')[0].get('colors').split(' ')
     layout = ac.find('layout')
     archiInterval = eval(layout.get('archi-interval')[:-1]) * temp.width
+    light = layout.get('light')
     rasterNum = eval(layout.find('raster').get('num'))
     backgroundShadow = layout.find('background-shadow')
     prospectShot = layout.find('prospect-shot')
@@ -208,19 +246,12 @@ def drawRaster(savePath, temp, archiNum=None):
     if not archiNum or archiNum > len(archis):
         archiNum = len(archis)
     archis = random.sample(archis, archiNum)
-    # for elem in temp.iter():
-    #     print(elem)
-    #     if elem not in archis and isinstance(elem, ParentsElement) :
-    #         elem.args['fill']='grey'
-    #         elem.args['stroke'] = 'grey'
     h_divide_w = np.array([archi.out_rect[1] / archi.out_rect[0] for archi in archis])
     arg_sort = np.argsort(-h_divide_w)
     # 限制高度,宽度
     const_w = temp.width * eval(prospectShot.get('width-bound')[:-1])
     const_h = temp.height * eval(prospectShot.get('height-bound')[:-1])
     max_h_div_w = const_h / const_w
-    # for i in range(num):
-    #     print(h_divide_w[i])
     tmp = [archis[i] for i in arg_sort]
     for i, archi in enumerate(tmp):
         archi.args['id'] = archi.file[:-4]
@@ -237,9 +268,12 @@ def drawRaster(savePath, temp, archiNum=None):
             'viewBox': f'0 0 {archi.out_rect[0] / ratio} {archi.out_rect[1] / ratio}',
             'fill': "white" if i > 3 else "grey",
             'stroke': "black",
-            'stroke-width': "5"}
+            'stroke-width': "3"}
         # archi.children = [archi.children[0]]
         archi.args.update(update_dict)
+        # for elem in archi.iter():
+        #     if 'light' in elem.args:
+        #         elem.args['fill'] = elem.args['light']
         use = drawSvg.Use(archi, 0, 0)
         temp.append(use)
     base = Archi(TAG_NAME='svg', id='raster')
@@ -278,4 +312,7 @@ def drawRaster(savePath, temp, archiNum=None):
 if __name__ == '__main__':
     """光栅绘制"""
     temp = loadTemp('ac/grid_scene.ac')
-    drawGrid(savePath='scenes/grid3.svg', temp=temp, archiNum=10)
+    if temp.getTree().getroot().get('name') == 'grid-template':
+        drawGrid(savePath='scenes/g4.svg', temp=temp)
+    elif temp.getTree().getroot().get('name') == 'raster-template':
+        drawRaster(savePath='scenes/r4.svg', temp=temp)

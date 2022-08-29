@@ -162,6 +162,14 @@ class Archi(drawSvg.DrawingParentElement):
     def getTree(self):
         return ET.parse(self.file)
 
+    def iter(self):
+        stack = [self]
+        while stack:
+            elem = stack.pop()
+            yield elem
+            for i in range(-1, -len(elem.children) - 1, -1):
+                stack.append(elem.children[i])
+
 
 class BasicElement(drawSvg.DrawingBasicElement):
     def __init__(self, TAG_NAME, **args):
