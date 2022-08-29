@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--光栅模板-->
+<scene name='raster-template' light='left'>
+<!--svg视窗大小-->
+<!--视窗的长宽记为W、H-->
+<scale>
+     <scale-template id='scale1' width='800' height='1200' default='True'/>
+     <scale-template id='' width='1600' height='900'/>    
+     <scale-template id='' width='1920' height='1080'/> 
+     <scale-template id='' width='960' height='540'/> 
+</scale>
+
+<!--画布位置-->
+<!--画布的长宽记为w、h,画布原点移动到(left,up)位置-->
+<position>
+     <pos-template id='pos1' left='0.1W' right='0.9W' up='0.1H' down='0.9H' default='True'/>
+     <pos-template id='' left='' right='' up='' down='' />
+</position>
+
+<!--配色方案-->
+<colors>
+     <!--配色模板-->
+     <color-template id='color1' colors='#49c2d5 #3049ae #fbb1fe #f1ce2c #e36372 #9eaef9 #3650cb'/>
+     <color-template id=''/>
+     <color-template id=''/>
+     <color-template id=''/>
+</colors>
+<!--可用于此模板的适配的archi文件(或者目录)-->
+<archis-url>
+     <archis id ='1' url='archis/archi/'/>
+     <archi id ='2' url=''/>
+     <archi id ='3' url=''/>
+</archis-url>
+<!--模板布局-->
+<layout archi-interval='0.05w'>
+     <!--光栅条纹参数-->
+     <raster layer='1' num='7'>
+     </raster>
+     <!--背景阴影参数-->
+     <background-shadow layer='2' up='0.6' down='0' width-bound='0.3w' height-bound='0.6h' fill='black' stroke='black'>
+     </background-shadow>
+     <!--前景建筑参数-->   
+     <prospect-shot layer='3' up='0.6' down='0' width-bound='0.3w' height-bound='0.6h' fill='white' stroke='white'>
+     </prospect-shot>
+     <!--云层参数-->   
+     <cloud num='9' url='archis/cloud/' layer='4' up='1' down='0.6' width-bound='0.3w' height-bound='0.6h' fill-opacity='0.3'>
+     </cloud>
+</layout>
+<!--模板评价方式-->
+<!--<aesthetic method=''/>-->
+</scene>

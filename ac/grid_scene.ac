@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--光栅模板-->
+<scene name='raster-template' light='left'>
+<!--svg视窗大小-->
+<!--视窗的长宽记为W、H-->
+<scale>
+     <scale-template id='scale1' width='200' height='250' default='True'/>
+     <scale-template id='' width='1600' height='900'/>
+     <scale-template id='' width='1920' height='1080'/>
+     <scale-template id='' width='960' height='540'/>
+</scale>
+
+<!--画布位置-->
+<!--画布的长宽记为w、h,画布原点移动到(left,up)位置-->
+<position>
+     <pos-template id='pos1' left='0.1W' right='0.9W' up='0.1H' down='0.9H' default='True'/>
+     <pos-template id='' left='' right='' up='' down='' />
+</position>
+
+<!--配色方案-->
+<colors>
+     <!--配色模板-->
+     <color-template id='color1' colors='#e00b0f #ff8f15 #2defe4 #ffde31 #e10aa6 #5b1dca #ffeec3 #38e490 #259386 #571ecd #2defe4 #ffde31'/>
+     <color-template id=''/>
+     <color-template id=''/>
+     <color-template id=''/>
+</colors>
+<!--可用于此模板的适配的archi文件(或者目录)-->
+<archis-url>
+     <archis id ='1' url='archis/archi/'/>
+     <archi id ='2' url=''/>
+     <archi id ='3' url=''/>
+</archis-url>
+<!--模板布局-->
+<layout archi-interval='0.005w'>
+     <!--网格基本单元参数-->
+     <grid layer='1' grid-x='4' grid-y='5'>
+     </grid>
+</layout>
+<!--模板评价方式-->
+<!--<aesthetic method=''/>-->
+</scene>
