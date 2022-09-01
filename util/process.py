@@ -91,10 +91,10 @@ def Level_traversal(img):
             ccc = conts[0]
             for i in range(1, len(out_cont)):
                 ccc = np.concatenate((ccc, out_cont[i]), axis=0)
-            x, y, w, h = cv2.boundingRect(cont)
+            # x, y, w, h = cv2.boundingRect(cont)
             conts.clear()
-            archiList[aid].contour = cont
-            archiList[aid].out_rect = [w, h]
+            # archiList[aid].contour = cont
+            # archiList[aid].out_rect = [w, h]
             if hierarchy[0][pid][2] >= 0:
                 aid += 1
                 archiList.append(Archi(id=aid))

@@ -36,6 +36,12 @@
 <rect id="rect10" x="120.8" y="80.8" width="38.4" height="38.4" fill="#571ecd" />
 </clipPath>
 </defs>
+<script>
+ var path = document.querySelector('#lineABC');
+ console.log(path);
+var length = path.getTotalLength();
+console.log(length)
+</script>
 <svg clip-path="url(#clip0)">
 <use xlink:href="#rect0" />
 <svg id="archis/archi/12" fill="#2defe4" stroke="#2defe4" x="4.640000000000001" y="9.8001393728223" width="861" height="824" viewBox="0 0 24131.54296875 23094.53125">

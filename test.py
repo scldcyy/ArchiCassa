@@ -1,19 +1,38 @@
-import copy
-import random
-import cv2
-import drawSvg
-import numpy as np
-from sklearn.neighbors import KDTree
-from Archi import *
+import drawSvg as draw
 
-a = Temp()
-b = Archi()
-c = BasicElement('rect')
-a.append(b)
-b.append(c)
-d = copy.deepcopy(a)
-print(a, d)
-#
+d = draw.Drawing(200, 200, origin='center')
+
+# Animate the position and color of circle
+c = draw.Circle(0, 0, 20, fill='red')
+# See for supported attributes:
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/animate
+c.appendAnim(draw.Animate('cy', '6s', '-80;80;-80',
+                          repeatCount='indefinite'))
+c.appendAnim(draw.Animate('cx', '6s', '0;80;0;-80;0',
+                          repeatCount='indefinite'))
+c.appendAnim(draw.Animate('fill', '6s', 'red;green;blue;yellow',
+                          calcMode='discrete',
+                          repeatCount='indefinite'))
+d.append(c)
+
+# Animate a black circle around an ellipse
+ellipse = draw.Path()
+ellipse.M(-90, 0)
+ellipse.A(90, 40, 360, True, True, 90, 0)  # Ellipse path
+ellipse.A(90, 40, 360, True, True, -90, 0)
+ellipse.Z()
+c2 = draw.Circle(0, 0, 10)
+# See for supported attributes:
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/animateMotion
+c2.appendAnim(draw.AnimateMotion(ellipse, '3s',
+                                 repeatCount='indefinite'))
+# See for supported attributes:
+# https://developer.mozilla.org/en-US/docs/Web/SVG/Element/animateTransform
+c2.appendAnim(draw.AnimateTransform('scale', '3s', '1,2;2,1;1,2;2,1;1,2',
+                                    repeatCount='indefinite'))
+d.append(c2)
+
+d.saveSvg('animated.svg')  # Save to file
 # w, h = 200, 250
 #
 # # colors = [(127, 199, 175, 110), (218, 216, 167, 110), (167, 219, 216, 110), (237, 118, 112, 110)]

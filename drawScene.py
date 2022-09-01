@@ -1,7 +1,8 @@
 import copy
 import os
 import random
-
+from msedge.selenium_tools import EdgeOptions
+from msedge.selenium_tools import Edge
 import drawSvg
 import numpy as np
 from Archi import Archi, Temp, color_generator, pts2path, BasicElement, prefix_tag, ParentsElement
@@ -74,34 +75,13 @@ def loadArchi(svgFile):
     return archi
 
 
-def drawGrid(savePath, temp):
+def generateGrid(grid_x, grid_y):
     """
-    网格布局
-    :param savePath:
-    :param temp:
+    生成具有三角格局的网格
+    :param grid_x:
+    :param grid_y:
     :return:
     """
-    # 读取archi
-    ac = temp.getTree()
-    colorTemplate = ac.find('colors')[0].get('colors').split(' ')
-    colorTemplate = [[colorTemplate[3 * i], colorTemplate[3 * i + 1], colorTemplate[3 * i + 2]] for i in
-                     range(int(len(colorTemplate) / 3))]
-    layout = ac.find('layout')
-    diff = eval(layout.get('archi-interval')[:-1]) * temp.width
-    Dir = ac.find('archis-url')[0].get('url')
-    archis = []
-    for i in os.listdir(Dir):
-        archi = loadArchi(Dir + i)
-        if archi:
-            archi.args['id'] = archi.file[:-4]
-            archis.append(archi)
-    # 确定网格位置、大小
-    w = temp.width
-    h = temp.height
-    grid_x = eval(layout[0].get('grid-x'))
-    grid_y = eval(layout[0].get('grid-y'))
-    sep_x = w / grid_x
-    sep_y = h / grid_y
     reverse = True if grid_x > grid_y else False
     if reverse:
         r_x, r_y = grid_y, grid_x
@@ -134,6 +114,67 @@ def drawGrid(savePath, temp):
 
     if reverse:
         grid = grid.T
+    return grid
+
+
+def chooseRightGrid(grid, h_divide_w):
+    """
+    选择合适的网格作为横跨元素
+    :param grid:
+    :param h_divide_w:
+    :return:
+    """
+
+    wait = np.argsort(-h_divide_w)
+    chs_ls = []
+    h, w = grid.shape
+    count = 1
+    for i in range(h):
+        for j in range(w):
+            if grid[i, j] == 0:
+                continue
+            if j + int(grid[i, j] ** 0.5) < h and grid[i, j + int(grid[i, j] ** 0.5)] != 0:
+                chs_ls.append([count, i, j, j + int(grid[i, j] ** 0.5)])
+            count += 1
+    tmp = [c[0] for c in chs_ls]
+    print(wait)
+    print(tmp)
+    for w in wait:
+        if w in tmp:
+            chs_grid = chs_ls[tmp.index(w)]
+            return chs_grid
+    return chs_ls[0]
+
+
+def drawGrid(savePath, temp):
+    """
+    网格布局
+    :param savePath:
+    :param temp:
+    :return:
+    """
+    # 读取archi
+    ac = temp.getTree()
+    colorTemplate = ac.find('colors')[0].get('colors').split(' ')
+    colorTemplate = [[colorTemplate[3 * i], colorTemplate[3 * i + 1], colorTemplate[3 * i + 2]] for i in
+                     range(int(len(colorTemplate) / 3))]
+    layout = ac.find('layout')
+    diff = eval(layout.get('archi-interval')[:-1]) * temp.width
+    Dir = ac.find('archis-url')[0].get('url')
+    archis = []
+    for i in os.listdir(Dir):
+        archi = loadArchi(Dir + i)
+        if archi:
+            archi.args['id'] = archi.file[:-4]
+            archis.append(archi)
+    # 确定网格位置、大小
+    w = temp.width
+    h = temp.height
+    grid_x = eval(layout[0].get('grid-x'))
+    grid_y = eval(layout[0].get('grid-y'))
+    sep_x = w / grid_x
+    sep_y = h / grid_y
+    grid = generateGrid(grid_x, grid_y)
     archiNum = np.count_nonzero(grid)
     # 绘制网格
     archis = random.sample(archis, archiNum)
@@ -141,19 +182,12 @@ def drawGrid(savePath, temp):
     colors = random.choices(colorTemplate, k=len(archis))
     current_x = sep_x / 2
     current_y = sep_y / 2
+    chs_grid = chooseRightGrid(grid, h_divide_w)
+    chs = chs_grid[0]
+    print('chs:', chs)
     count = 0
-    wait = np.argsort(-h_divide_w)
-    tmp = np.cumsum([np.count_nonzero(i) for i in grid])
-    sameRow = np.zeros_like(tmp)
-    sameRow[1:] = tmp[:-1]
-    for i in range(len(wait)):
-        if wait[i] in sameRow:
-            np.delete(wait, i)
-    chs = wait[0]
-    # chs = sat
-    # chs = np.random.choice(np.setdiff1d(wait, sameRow), 1)[0]
     base_ls = []
-    c1, c2 = colors[0][1], colors[0][1]
+    c0, c1, c2 = colors[0][0], colors[0][1], colors[0][1]
     for i in range(grid_x):
         for j in range(grid_y):
             cell = grid[i, j]
@@ -165,44 +199,53 @@ def drawGrid(savePath, temp):
                 cx = current_x + sep_x / 2 * (step - 1)
                 cy = current_y + sep_y / 2 * (step - 1)
                 archi_h_div_w = h_divide_w[count]
-                step = grid_w
                 rect = BasicElement(TAG_NAME='rect', id=f'rect{count}', x=cx - grid_w,
                                     y=cy - grid_h,
                                     width=2 * grid_w, height=2 * grid_h,
                                     fill=colors[count][0])
                 clip = drawSvg.ClipPath(id=f'clip{count}')
                 clip.append(rect)
-                if archi_h_div_w > grid_h / grid_w:
-                    step = grid_h / archi_h_div_w
-
                 if count == chs - 1:
                     archi = Archi()
-                    c1, c2 = colors[count][1], colors[count][2]
+                    c0, c1, c2 = colors[count][0], colors[count][1], colors[count][2]
                 elif count == chs:
-                    ratio = min((sep_y - diff) / archi.out_rect[1] * 3, (sep_x - diff) / archi.out_rect[0] * 0.8)
-                    update_dict = {'x': str(current_x - archi.out_rect[0] * ratio / 2),
-                                   'y': str(current_y + grid_h - archi.out_rect[1] * ratio),
-                                   'width': str(archi.out_rect[0]),
-                                   'height': str(archi.out_rect[1]),
-                                   'viewBox': f'0 0 {archi.out_rect[0] / ratio} {archi.out_rect[1] / ratio}',
-                                   'fill': colors[count][1],
-                                   'stroke': colors[count][1]}
-                    archi.args.update(update_dict)
-                    for elem in archi.iter():
-                        if 'light' in elem.args:
-                            elem.args['fill'] = c2
-                    base_ls[count - 1].children[1] = copy.deepcopy(archi)
-                    base_ls[count - 1].children[1].args['fill'] = c1
-                    base_ls[count - 1].children[1].args['stroke'] = c1
-                else:
-                    ratio = step / archi.out_rect[0] * 1.6
+                    formal_cell = grid[chs_grid[1], chs_grid[2]]
+                    grid_w = sep_x / 2 - diff
+                    grid_h = sep_y * (step + formal_cell ** 0.5) / 2 - diff
+                    cx = current_x
+                    cy = current_y + sep_y / 2 * ((step - 1) - formal_cell ** 0.5) / 2
+                    const_w = grid_w
+                    if archi_h_div_w > grid_h / grid_w:
+                        const_w = grid_h / archi_h_div_w
+                    ratio = const_w / archi.out_rect[0] * 1.6
                     update_dict = {'x': str(cx - archi.out_rect[0] * ratio / 2),
                                    'y': str(cy + grid_h - archi.out_rect[1] * ratio),
                                    'width': str(archi.out_rect[0]),
                                    'height': str(archi.out_rect[1]),
                                    'viewBox': f'0 0 {archi.out_rect[0] / ratio} {archi.out_rect[1] / ratio}',
-                                   'fill': colors[count][1],
-                                   'stroke': colors[count][1]}
+                                   'fill': colors[count][0],
+                                   'stroke': colors[count][1],
+                                   'stroke-width': 3}
+                    archi.args.update(update_dict)
+                    for elem in archi.iter():
+                        if 'light' in elem.args:
+                            elem.args['fill'] = c2
+                    base_ls[count - 1].children[1] = copy.deepcopy(archi)
+                    base_ls[count - 1].children[1].args['fill'] = c0
+                    base_ls[count - 1].children[1].args['stroke'] = c1
+                else:
+                    const_w = grid_w
+                    if archi_h_div_w > grid_h / grid_w:
+                        const_w = grid_h / archi_h_div_w
+                    ratio = const_w / archi.out_rect[0] * 1.6
+                    update_dict = {'x': str(cx - archi.out_rect[0] * ratio / 2),
+                                   'y': str(cy + grid_h - archi.out_rect[1] * ratio),
+                                   'width': str(archi.out_rect[0]),
+                                   'height': str(archi.out_rect[1]),
+                                   'viewBox': f'0 0 {archi.out_rect[0] / ratio} {archi.out_rect[1] / ratio}',
+                                   'fill': colors[count][0],
+                                   'stroke': colors[count][1],
+                                   'stroke-width': 3}
                     archi.args.update(update_dict)
                     for elem in archi.iter():
                         if 'light' in elem.args:
@@ -212,7 +255,6 @@ def drawGrid(savePath, temp):
                 base.append(archi)
                 base.args['clip-path'] = clip
                 base_ls.append(base)
-                # gridLoc.append([i, j])
                 count += 1
             current_y += sep_y
         current_y = sep_y / 2
@@ -253,6 +295,7 @@ def drawRaster(savePath, temp, archiNum=None):
     const_h = temp.height * eval(prospectShot.get('height-bound')[:-1])
     max_h_div_w = const_h / const_w
     tmp = [archis[i] for i in arg_sort]
+    current_x = 0
     for i, archi in enumerate(tmp):
         archi.args['id'] = archi.file[:-4]
         archi_h_div_w = h_divide_w[arg_sort[i]]
@@ -269,13 +312,11 @@ def drawRaster(savePath, temp, archiNum=None):
             'fill': "white" if i > 3 else "grey",
             'stroke': "black",
             'stroke-width': "3"}
-        # archi.children = [archi.children[0]]
         archi.args.update(update_dict)
         # for elem in archi.iter():
         #     if 'light' in elem.args:
         #         elem.args['fill'] = elem.args['light']
-        use = drawSvg.Use(archi, 0, 0)
-        temp.append(use)
+        temp.append(archi)
     base = Archi(TAG_NAME='svg', id='raster')
     w = temp.width / rasterNum
     for i in range(rasterNum):
@@ -294,7 +335,6 @@ def drawRaster(savePath, temp, archiNum=None):
     cloudUrl = cloud.get('url')
     down = eval(cloud.get('down'))
     opacity = eval(cloud.get('fill-opacity'))
-    print('op:', opacity)
     cloudLs = [loadArchi(cloudUrl + i) for i in os.listdir(cloudUrl)][:cloudNum]
     for i, c in enumerate(cloudLs):
         update_dict = {
@@ -305,14 +345,59 @@ def drawRaster(savePath, temp, archiNum=None):
             'fill': "white",
             'stroke': "white"}
         c.args.update(update_dict)
-        temp.append(drawSvg.Use(c, 0, 0))
+        temp.append(c)
     temp.saveSvg(savePath)
+
+
+def appendPathLen(temp, svg_path):
+    """
+    向svg图片中的path添加css动画
+    :param temp:
+    :param svg_path:
+    :return:
+    """
+    edge_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedgedriver.exe"
+    edge_options = EdgeOptions()
+    edge_options.use_chromium = True
+    edge_options.add_argument('--headless')
+    edge_options.add_argument('disable_gpu')
+    web = Edge(executable_path=edge_path, options=edge_options)
+    # 模拟浏览器打开svg文件
+    print(svg_path)
+    web.get(svg_path)
+    javascriptCode_1 = '''
+        var paths = document.getElementsByTagName("path");
+        var lenArr=[];
+        for (var i=0;i<paths.length;i++){lenArr.push(paths[i].getTotalLength());}
+        return lenArr;
+        '''
+    pathLenArr = web.execute_script(javascriptCode_1)
+    style = ParentsElement(TAG_NAME='style', content='\n@keyframes dash {to {stroke-dashoffset: 0;}}\n')
+    count = 0
+    for elem in temp.iter():
+        if elem == temp:
+            continue
+        if elem.TAG_NAME == 'path':
+            pid = f'path{count}'
+            elem.args['id'] = pid
+            length = pathLenArr[count]
+            style.content += f'#{pid} {{\n'
+            style.content += f'stroke-dasharray: {length};\n'
+            style.content += f'stroke-dashoffset: {length};\n'
+            style.content += 'animation: dash 5s linear forwards;\n'
+            style.content += 'animation-delay: 1s;\n'
+            style.content += '-webkit-animation: dash 5s linear forwards;'
+            style.content += '}\n'
+            count += 1
+    temp.elements = [style] + temp.elements
+    temp.saveSvg(svg_path)
 
 
 if __name__ == '__main__':
     """光栅绘制"""
-    temp = loadTemp('ac/grid_scene.ac')
+    temp = loadTemp('ac/raster_scene.ac')
     if temp.getTree().getroot().get('name') == 'grid-template':
-        drawGrid(savePath='scenes/g4.svg', temp=temp)
+        drawGrid(savePath='scenes/grid12.svg', temp=temp)
     elif temp.getTree().getroot().get('name') == 'raster-template':
-        drawRaster(savePath='scenes/r4.svg', temp=temp)
+        drawRaster(savePath='scenes/r12.svg', temp=temp, archiNum=10)
+    # appendPathLen(temp, r'C:\Users\85365\PycharmProjects\ArchiCasca\scenes\grid12.svg')

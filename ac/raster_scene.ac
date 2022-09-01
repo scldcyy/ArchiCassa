@@ -32,7 +32,7 @@
      <archi id ='3' url=''/>
 </archis-url>
 <!--模板布局-->
-<layout archi-interval='0.05w' light='True'>
+<layout archi-interval='0.0334w' light='False'>
      <!--光栅条纹参数-->
      <raster layer='1' num='7'>
      </raster>

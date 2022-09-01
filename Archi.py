@@ -80,6 +80,42 @@ def measure_centroids(contour):
     return cx, cy, area
 
 
+class BasicElement(drawSvg.DrawingBasicElement):
+    def __init__(self, TAG_NAME, **args):
+        """
+        单节点svg元素
+        :param TAG_NAME:
+        :param args:
+        """
+        self.TAG_NAME = TAG_NAME
+        super().__init__(**args)
+
+
+class ParentsElement(drawSvg.DrawingParentElement):
+    def __init__(self, TAG_NAME, content='', **args):
+        """
+        多节点svg元素
+        :param TAG_NAME:
+        :param args:
+        """
+        self.TAG_NAME = TAG_NAME
+        self.content = content
+        super().__init__(**args)
+
+    def writeContent(self, idGen, isDuplicate, outputFile, dryRun):
+        """
+        重载，向节点写入内容
+        :param idGen:
+        :param isDuplicate:
+        :param outputFile:
+        :param dryRun:
+        :return:
+        """
+        if dryRun:
+            return
+        outputFile.write(self.content)
+
+
 class Temp(drawSvg.Drawing):
     def __init__(self, width=720, height=1280, file=None, **svgArgs):
         """
@@ -146,16 +182,14 @@ class Temp(drawSvg.Drawing):
         return ET.parse(self.file)
 
 
-class Archi(drawSvg.DrawingParentElement):
-    def __init__(self, TAG_NAME='svg', cont=None, out_rect=None, file=None, **args):
+class Archi(ParentsElement):
+    def __init__(self, TAG_NAME='svg', out_rect=None, file=None, **args):
         """
         每个archi对应一个svg文件，且其内部有更小的构件
         :param out_rect: [w,h] 外接矩形大小
         :param contour: [point 1,...,point n]，轮廓列表
         """
-        super().__init__(**args)
-        self.TAG_NAME = TAG_NAME
-        self.contour = cont
+        super().__init__(TAG_NAME, **args)
         self.out_rect = np.array(out_rect)
         self.file = file
 
@@ -169,25 +203,3 @@ class Archi(drawSvg.DrawingParentElement):
             yield elem
             for i in range(-1, -len(elem.children) - 1, -1):
                 stack.append(elem.children[i])
-
-
-class BasicElement(drawSvg.DrawingBasicElement):
-    def __init__(self, TAG_NAME, **args):
-        """
-        单节点svg元素
-        :param TAG_NAME:
-        :param args:
-        """
-        self.TAG_NAME = TAG_NAME
-        super().__init__(**args)
-
-
-class ParentsElement(drawSvg.DrawingParentElement):
-    def __init__(self, TAG_NAME, **args):
-        """
-        多节点svg元素
-        :param TAG_NAME:
-        :param args:
-        """
-        self.TAG_NAME = TAG_NAME
-        super().__init__(**args)
